@@ -1,0 +1,2 @@
+jar: GwtVersioner
+main: org.litesoft.gwtversioner.GwtVersioner
