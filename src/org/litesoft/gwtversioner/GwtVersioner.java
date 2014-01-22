@@ -13,14 +13,15 @@ import java.util.List;
 import java.util.Map;
 
 public class GwtVersioner {
-    public static final String SCRIPT_START = "<script src=\"";
+    public static final String SCRIPT_STARTSWITH = "<script src=\"";
     public static final String MIDDLE2VER = "/";
     public static final String VERSION = "ver.";
     public static final String SCRIPT_MIDDLE = MIDDLE2VER + VERSION + "js/";
-    public static final String SCRIPT_END = ".js\"></script>";
+    public static final String SCRIPT_FILE_TYPE = ".js#";
+    public static final String SCRIPT_ENDSWITH = "\"></script>";
 
     public static void main(String[] args) {
-        System.out.println("GwtVersioner vs 1.0");
+        System.out.println("GwtVersioner vs 1.1");
         if (args.length > 1) {
             System.err.println("Too many arguments, expected only a directory reference");
             System.exit(1);
@@ -74,7 +75,8 @@ public class GwtVersioner {
             return "No Directories found (of form 'ver.')";
         }
         if (mHtmlFileContentsByFileToMutate.isEmpty()) {
-            return "No html files with '<script src=\"' + (. / ..) '/ver.js/' + aa + '.js\"></script>' found in them";
+            return "No html files with '" + SCRIPT_STARTSWITH + "' + (. / ..) + '" + SCRIPT_MIDDLE +
+                    "' + a...a + '" + SCRIPT_FILE_TYPE + "' + aa_AA + '" + SCRIPT_ENDSWITH + "' found in them";
         }
         updateHtmlFiles();
         moveDirectories();
@@ -131,15 +133,17 @@ public class GwtVersioner {
 
     private boolean adjustedVersion(String[] pLines, int pLineOffset) {
         String zLine = pLines[pLineOffset];
-        int zStartAt = zLine.indexOf(SCRIPT_START);
+        int zStartAt = zLine.indexOf(SCRIPT_STARTSWITH);
         if (zStartAt != -1) {
-            int zDotsAt = zStartAt + SCRIPT_START.length();
+            int zDotsAt = zStartAt + SCRIPT_STARTSWITH.length();
             int zMiddleAt = zLine.indexOf(SCRIPT_MIDDLE, zDotsAt);
-            if (zMiddleAt != -1) {
-                int zLanguageAt = zMiddleAt + SCRIPT_MIDDLE.length();
-                int zEndAt = zLine.indexOf(SCRIPT_END, zLanguageAt);
-                if (zEndAt != -1) {
-                    if (validateDots(zLine, zDotsAt, zMiddleAt) && validateLanguage(zLine, zLanguageAt, zEndAt)) {
+            if ((zMiddleAt != -1) && validateDots(zLine, zDotsAt, zMiddleAt)) {
+                int zPostMiddleAt = zMiddleAt + SCRIPT_MIDDLE.length();
+                int zFileTypeAt = zLine.indexOf(SCRIPT_FILE_TYPE, zPostMiddleAt);
+                int zEndAt = zLine.indexOf(SCRIPT_ENDSWITH, zPostMiddleAt);
+                if ((zFileTypeAt != -1) && (zEndAt != -1) && (zFileTypeAt < zEndAt)) {
+                    int zLanguageAt = zFileTypeAt + SCRIPT_FILE_TYPE.length();
+                    if (validateLanguage(zLine, zLanguageAt, zEndAt)) {
                         int zVersionAt = zMiddleAt + MIDDLE2VER.length();
                         int zPostVersion = zVersionAt + VERSION.length();
                         zLine = zLine.substring(0, zVersionAt) + mVersionedDirName + "/" + zLine.substring(zPostVersion);
@@ -167,15 +171,13 @@ public class GwtVersioner {
 
     private boolean validateLanguage(String pLine, int pFrom, int pUptoExclusive) {
         int zLength = pUptoExclusive - pFrom;
-        if (zLength != 2) {
-            return false;
-        }
-        while (pFrom < pUptoExclusive) {
-            if (!Characters.isLowerCaseAsciiAlpha(pLine.charAt(pFrom++))) {
-                return false;
-            }
-        }
-        return true;
+        boolean rv = (zLength == 5);
+        rv &= Characters.isLowerCaseAsciiAlpha(pLine.charAt(pFrom++));
+        rv &= Characters.isLowerCaseAsciiAlpha(pLine.charAt(pFrom++));
+        rv &= ('_' == pLine.charAt(pFrom++));
+        rv &= Characters.isUpperCaseAsciiAlpha(pLine.charAt(pFrom++));
+        rv &= Characters.isUpperCaseAsciiAlpha(pLine.charAt(pFrom));
+        return rv;
     }
 
     private void updateHtmlFiles() {
