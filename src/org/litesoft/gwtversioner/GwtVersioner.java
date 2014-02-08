@@ -21,7 +21,8 @@ public class GwtVersioner {
     public static final String SCRIPT_ENDSWITH = "\"></script>";
 
     public static void main(String[] args) {
-        System.out.println("GwtVersioner vs 1.1");
+        String zVersion = createVersionFromNow();
+        System.out.println("GwtVersioner vs 1.2 -> " + zVersion);
         if (args.length > 1) {
             System.err.println("Too many arguments, expected only a directory reference");
             System.exit(1);
@@ -33,7 +34,7 @@ public class GwtVersioner {
             System.exit(1);
         }
         try {
-            String zError = new GwtVersioner(zDir = zDir.getCanonicalFile(), "ver" + createVersionFromNow()).process();
+            String zError = new GwtVersioner(zDir = zDir.getCanonicalFile(), zVersion).process();
             if (zError != null) {
                 System.err.println(zError + " in directory: " + zDir.getAbsolutePath());
                 System.exit(1);
@@ -59,14 +60,26 @@ public class GwtVersioner {
 
     // ^^^^^^^^^^^^^^^^^^^^^^^^^^ Ripped From Timestamps ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+    // vvvvvvvvvvvvvvvvvvvvvvvvvv Ripped From Old CopyVersioned vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+
+    private static File adjustForVersionCopy(File pFile, String pVersion) {
+        String zPath = pFile.getPath();
+        int zAt = zPath.indexOf(".html");
+        String zVersionedPath = zPath.substring(0, zAt) + "_" + pVersion + zPath.substring(zAt);
+        return new File(zVersionedPath);
+    }
+
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^ Ripped From Old CopyVersioned ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
     private final File mDir;
+    private final String mVersion;
     private final String mVersionedDirName;
     private final Map<File, String[]> mHtmlFileContentsByFileToMutate = new HashMap<File, String[]>();
     private final List<File> mDirectoriesToMove = new ArrayList<File>();
 
-    public GwtVersioner(File pDir, String pVersionedDirName) {
+    public GwtVersioner(File pDir, String pVersion) {
         mDir = pDir;
-        mVersionedDirName = pVersionedDirName;
+        mVersionedDirName = "ver" + (mVersion = pVersion);
     }
 
     private String process() throws IOException {
@@ -182,7 +195,9 @@ public class GwtVersioner {
 
     private void updateHtmlFiles() {
         for (File zFile : mHtmlFileContentsByFileToMutate.keySet()) {
-            updateHtmlFile(zFile, mHtmlFileContentsByFileToMutate.get(zFile));
+            String[] zLines = mHtmlFileContentsByFileToMutate.get(zFile);
+            updateHtmlFile(zFile, zLines);
+            updateHtmlFile(adjustForVersionCopy(zFile, mVersion), zLines);
         }
     }
 
